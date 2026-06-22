@@ -80,15 +80,20 @@ func (a *Aggregator) Aggregate() {
 
 	a.metrics.endTime = time.Now()
 	a.metrics.totalTime = time.Since(a.metrics.startTime)
-	a.metrics.averageLatency = a.metrics.latencySum / time.Duration(a.metrics.totalCount)
 	a.metrics.requestsPerSecond = float64(a.metrics.totalCount) / a.metrics.totalTime.Seconds()
+
+	// Calculate Average Latency based ONLY on actual network round-trips completed
+	validRequests := a.metrics.totalCount - a.metrics.totalErrorCount
+	if validRequests > 0 {
+		a.metrics.averageLatency = a.metrics.latencySum / time.Duration(validRequests)
+	}
 
 	fmt.Println("\n================ GOKU RESULTS ================")
 	fmt.Printf("Total execution time:   %v\n", a.metrics.totalTime.Round(time.Millisecond))
 	fmt.Printf("Throughput (RPS):       %.2f req/sec\n", a.metrics.requestsPerSecond)
 	fmt.Printf("Total requests count:   %d\n", a.metrics.totalCount)
 	fmt.Printf("✅ Successful (2xx):    %d\n", a.metrics.successCount)
-	fmt.Printf("❌ Failed (Non-2xx):    %d\n", a.metrics.failedCount)
+	fmt.Printf("❌ Failed (Non-2xx):    %d\n", a.metrics.failedCount-a.metrics.totalErrorCount) // Actual HTTP status code failures
 	fmt.Printf("⚠️ Network/OS Errors:   %d\n", a.metrics.totalErrorCount)
 	fmt.Println("----------------------------------------------")
 	fmt.Printf("Latency Sum:            %v\n", a.metrics.latencySum.Round(time.Millisecond))
