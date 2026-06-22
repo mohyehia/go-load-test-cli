@@ -53,6 +53,7 @@ func (a *Aggregator) Add(latency time.Duration, statusCode int, errorMsg string)
 	}
 	if errorMsg != "" {
 		a.metrics.totalErrorCount++
+		return // Do not calculate latency for failed/aborted network calls
 	}
 
 	if a.metrics.totalCount == 1 {
@@ -95,5 +96,25 @@ func (a *Aggregator) Aggregate() {
 	fmt.Printf("Min Request Latency:    %v\n", a.metrics.minLatency.Round(time.Microsecond))
 	fmt.Printf("Max Request Latency:    %v\n", a.metrics.maxLatency.Round(time.Microsecond))
 	fmt.Println("==============================================")
+}
 
+func (a *Aggregator) PrintProgress() {
+	a.Lock()
+	defer a.Unlock()
+	// Guard against division by zero if it ticks before the first request finishes
+	// \r resets the cursor to the start of the line.
+	if a.metrics.totalCount == 0 {
+		fmt.Print("\r⏳ [Goku] Preparing workers...")
+	}
+	totalTime := time.Since(a.metrics.startTime)
+
+	// calculate requests per second
+	rps := float64(a.metrics.totalCount) / totalTime.Seconds()
+	// The trailing space clears out any leftover characters from previous longer lines.
+	fmt.Printf("\r 🚀 [Goku] Running... Requests: %d | Success: %d | Failed: %d | Current RPS: %.2f	",
+		a.metrics.totalCount,
+		a.metrics.successCount,
+		a.metrics.failedCount,
+		rps,
+	)
 }

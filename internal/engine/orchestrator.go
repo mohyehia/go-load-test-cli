@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -53,6 +54,10 @@ func Orchestrate(cfg *config.Config, aggregator *metrics.Aggregator) {
 	workerWg := sync.WaitGroup{}
 	consumerWg := sync.WaitGroup{}
 
+	// 2. Launch the Real-Time UI Ticker Goroutine right before starting workers
+	progressChannel := make(chan struct{})
+	go initializeProgressBar(aggregator, progressChannel)
+
 	// spin up the workers based on concurrency
 	for range numOfWorkers {
 		workerWg.Go(func() {
@@ -73,4 +78,22 @@ func Orchestrate(cfg *config.Config, aggregator *metrics.Aggregator) {
 		close(results)
 	}()
 	consumerWg.Wait()
+
+	// 5. Tell the progress tracker its watch has ended!
+	close(progressChannel)
+}
+
+func initializeProgressBar(aggregator *metrics.Aggregator, progressChannel chan struct{}) {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-progressChannel:
+			// Line flush: move to the next line when done so the final report doesn't overwrite us
+			fmt.Println()
+			return
+		case <-ticker.C:
+			aggregator.PrintProgress()
+		}
+	}
 }
