@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func CallAPI(ctx context.Context, httpClient *http.Client, job HttpJob) HttpResult {
+func CallAPI(ctx context.Context, headers map[string]string, httpClient *http.Client, job HttpJob) HttpResult {
 	req, err := http.NewRequestWithContext(ctx, job.HttpMethod, job.TargetURL, nil)
 	if err != nil {
 		return HttpResult{
@@ -15,6 +15,7 @@ func CallAPI(ctx context.Context, httpClient *http.Client, job HttpJob) HttpResu
 			ErrorMsg: err.Error(),
 		}
 	}
+	addHeadersToRequest(headers, req)
 	startTime := time.Now()
 	res, err := httpClient.Do(req)
 	latency := time.Since(startTime)
@@ -42,5 +43,13 @@ func CallAPI(ctx context.Context, httpClient *http.Client, job HttpJob) HttpResu
 		StatusCode: res.StatusCode,
 		Latency:    latency,
 		ErrorMsg:   "",
+	}
+}
+
+func addHeadersToRequest(headers map[string]string, req *http.Request) {
+	if headers != nil && len(headers) > 0 {
+		for k, v := range headers {
+			req.Header.Add(k, v)
+		}
 	}
 }

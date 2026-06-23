@@ -15,9 +15,11 @@ type Config struct {
 	Concurrency int
 	Duration    time.Duration
 	Timeout     time.Duration
+	Headers     map[string]string
 }
 
 func ParseFlags() (*Config, error) {
+	var rawHeaders headerFlags
 	config := &Config{}
 	// Bind short and long flags to the exact same struct pointers
 	flag.StringVar(&config.URL, "u", "", "Target URL to load test (Required)")
@@ -40,6 +42,9 @@ func ParseFlags() (*Config, error) {
 	flag.StringVar(&timeOut, "t", "5s", "Timeout limit per individual HTTP request")
 	flag.StringVar(&timeOut, "timeout", "5s", "Timeout limit per individual HTTP request")
 
+	flag.Var(&rawHeaders, "H", "Additional HTTP header")
+	flag.Var(&rawHeaders, "header", "Additional HTTP header")
+
 	// Parse parameters out of os.Args
 	flag.Parse()
 
@@ -61,7 +66,11 @@ func ParseFlags() (*Config, error) {
 		}
 		config.Timeout = d
 	}
-
+	kvMap, err := extractHeaderFlags(rawHeaders)
+	if err != nil {
+		return nil, err
+	}
+	config.Headers = kvMap
 	return config, nil
 }
 

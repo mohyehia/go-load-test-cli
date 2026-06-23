@@ -35,6 +35,13 @@ func main() {
 	fmt.Printf("⚡ HTTP Method:   %s\n", cfg.Method)
 	fmt.Printf("👥 Concurrency:  %d workers\n", cfg.Concurrency)
 	fmt.Printf("⏱️ Request TO:   %v\n", cfg.Timeout)
+	// Print headers if exist
+	if len(cfg.Headers) > 0 {
+		fmt.Println("📋 Custom Headers:")
+		for k, v := range cfg.Headers {
+			fmt.Printf("   ├── %s: %s\n", k, v)
+		}
+	}
 	if cfg.Requests > 0 {
 		fmt.Printf("📊 Profile:      Count-based (%d requests)\n", cfg.Requests)
 	} else {
