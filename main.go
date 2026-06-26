@@ -35,6 +35,7 @@ func main() {
 	fmt.Printf("⚡ HTTP Method:   %s\n", cfg.Method)
 	fmt.Printf("👥 Concurrency:  %d workers\n", cfg.Concurrency)
 	fmt.Printf("⏱️ Request TO:   %v\n", cfg.Timeout)
+
 	// Print headers if exist
 	if len(cfg.Headers) > 0 {
 		fmt.Println("📋 Custom Headers:")
@@ -46,6 +47,10 @@ func main() {
 		fmt.Printf("📊 Profile:      Count-based (%d requests)\n", cfg.Requests)
 	} else {
 		fmt.Printf("📊 Profile:      Duration-based (%v limit)\n", cfg.Duration)
+	}
+
+	if len(cfg.RequestPayload) > 0 {
+		fmt.Printf("Payload Length:  %d\n", len(cfg.RequestPayload))
 	}
 
 	aggregator := metrics.NewAggregator()

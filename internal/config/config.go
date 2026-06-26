@@ -4,18 +4,20 @@ import (
 	"flag"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
 
 type Config struct {
-	URL         string
-	Method      string
-	Requests    int
-	Concurrency int
-	Duration    time.Duration
-	Timeout     time.Duration
-	Headers     map[string]string
+	URL            string
+	Method         string
+	Requests       int
+	Concurrency    int
+	Duration       time.Duration
+	Timeout        time.Duration
+	Headers        map[string]string
+	RequestPayload []byte
 }
 
 func ParseFlags() (*Config, error) {
@@ -45,7 +47,13 @@ func ParseFlags() (*Config, error) {
 	flag.Var(&rawHeaders, "H", "Additional HTTP header")
 	flag.Var(&rawHeaders, "header", "Additional HTTP header")
 
-	// Parse parameters out of os.Args
+	var payload string
+	flag.StringVar(&payload, "b", "", "Raw request body string (e.g., '{\"name\":\"body\"}')")
+	flag.StringVar(&payload, "body", "", "Raw request body string (e.g., '{\"name\":\"body\"}')")
+
+	var filePath string
+	flag.StringVar(&filePath, "f", "", "Path to a file containing the request body")
+	flag.StringVar(&filePath, "file", "", "Path to a file containing the request body")
 	flag.Parse()
 
 	// update method to be uppercase
@@ -66,6 +74,22 @@ func ParseFlags() (*Config, error) {
 		}
 		config.Timeout = d
 	}
+
+	if payload != "" && filePath != "" {
+		return nil, fmt.Errorf("error: cannot specify both raw body (-b) and body file (-f)")
+	}
+
+	// parse request body from either payload or filePath
+	if strings.TrimSpace(payload) != "" {
+		config.RequestPayload = []byte(payload)
+	} else if strings.TrimSpace(filePath) != "" {
+		bytes, err := os.ReadFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("error: could not read body file %q: %w", filePath, err)
+		}
+		config.RequestPayload = bytes
+	}
+
 	kvMap, err := extractHeaderFlags(rawHeaders)
 	if err != nil {
 		return nil, err
@@ -85,6 +109,10 @@ func (c *Config) Validate() error {
 
 	if err := validateConcurrency(c.Concurrency); err != nil {
 		return err
+	}
+
+	if c.Method == "GET" && len(c.RequestPayload) > 0 {
+		return fmt.Errorf("error: request body provided but HTTP method is GET. Did you mean to use POST or PUT")
 	}
 
 	if c.Timeout <= 0 {

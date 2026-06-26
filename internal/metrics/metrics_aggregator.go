@@ -6,12 +6,6 @@ import (
 	"time"
 )
 
-type AggregatorRequest struct {
-	latency    time.Duration
-	statusCode int
-	errorMsg   string
-}
-
 type Aggregator struct {
 	metrics *Metrics
 	sync.Mutex
@@ -45,8 +39,7 @@ func (a *Aggregator) Add(latency time.Duration, statusCode int, errorMsg string)
 	a.Lock()
 	defer a.Unlock()
 	a.metrics.totalCount++
-	a.metrics.latencySum += latency
-	if statusCode >= 200 && statusCode < 300 {
+	if statusCode >= 200 && statusCode < 400 {
 		a.metrics.successCount++
 	} else {
 		a.metrics.failedCount++
@@ -55,6 +48,8 @@ func (a *Aggregator) Add(latency time.Duration, statusCode int, errorMsg string)
 		a.metrics.totalErrorCount++
 		return // Do not calculate latency for failed/aborted network calls
 	}
+
+	a.metrics.latencySum += latency
 
 	if a.metrics.totalCount == 1 {
 		// First request
@@ -92,7 +87,7 @@ func (a *Aggregator) Aggregate() {
 	fmt.Printf("Total execution time:   %v\n", a.metrics.totalTime.Round(time.Millisecond))
 	fmt.Printf("Throughput (RPS):       %.2f req/sec\n", a.metrics.requestsPerSecond)
 	fmt.Printf("Total requests count:   %d\n", a.metrics.totalCount)
-	fmt.Printf("✅ Successful (2xx):    %d\n", a.metrics.successCount)
+	fmt.Printf("✅ Successful (2xx - 3xx):    %d\n", a.metrics.successCount)
 	fmt.Printf("❌ Failed (Non-2xx):    %d\n", a.metrics.failedCount-a.metrics.totalErrorCount) // Actual HTTP status code failures
 	fmt.Printf("⚠️ Network/OS Errors:   %d\n", a.metrics.totalErrorCount)
 	fmt.Println("----------------------------------------------")
@@ -110,6 +105,7 @@ func (a *Aggregator) PrintProgress() {
 	// \r resets the cursor to the start of the line.
 	if a.metrics.totalCount == 0 {
 		fmt.Print("\r⏳ [Goku] Preparing workers...")
+		return
 	}
 	totalTime := time.Since(a.metrics.startTime)
 

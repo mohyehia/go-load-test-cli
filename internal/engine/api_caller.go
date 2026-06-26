@@ -1,14 +1,19 @@
 package engine
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net/http"
 	"time"
 )
 
-func CallAPI(ctx context.Context, headers map[string]string, httpClient *http.Client, job HttpJob) HttpResult {
-	req, err := http.NewRequestWithContext(ctx, job.HttpMethod, job.TargetURL, nil)
+func CallAPI(ctx context.Context, headers map[string]string, payload []byte, httpClient *http.Client, job HttpJob) HttpResult {
+	var payloadReader io.Reader
+	if len(payload) > 0 {
+		payloadReader = bytes.NewReader(payload)
+	}
+	req, err := http.NewRequestWithContext(ctx, job.HttpMethod, job.TargetURL, payloadReader)
 	if err != nil {
 		return HttpResult{
 			JobID:    job.JobID,

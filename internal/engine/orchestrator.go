@@ -61,7 +61,7 @@ func Orchestrate(cfg *config.Config, aggregator *metrics.Aggregator) {
 	// spin up the workers based on concurrency
 	for range numOfWorkers {
 		workerWg.Go(func() {
-			initializeWorker(ctx, httpClient, cfg.Headers, jobs, results)
+			initializeWorker(ctx, httpClient, cfg.Headers, cfg.RequestPayload, jobs, results)
 		})
 	}
 
